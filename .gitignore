@@ -1,2 +1,8 @@
 rusty_backup/target/
 Cargo.lock
+__pycache__
+build
+dist
+.vscode
+*.spec
+*.bat
