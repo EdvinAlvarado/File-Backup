@@ -24,9 +24,9 @@ struct Backup {
 
 impl Config {
     fn new<P: AsRef<Path>>(p: P) -> Result<Config, Box<dyn Error>> {
-        let f = fs::File::open(p.as_ref())?;
+        let f = fs::File::open(p.as_ref()).expect("Cannot read file. Maybe doesn't exist or it is locked?");
         let reader = BufReader::new(f);
-        let doc: Config = quick_xml::de::from_reader(reader).expect("config file is incorrect");
+        let doc: Config = quick_xml::de::from_reader(reader)?;
         Ok(doc)
     }
 }
@@ -65,10 +65,21 @@ fn backup<P: AsRef<Path>>(backup_count: usize, backup_dir: P, source_file: P) ->
     Ok(file)
 }
 
-fn main() {
 
-    let config_file = std::env::args().nth(1).expect("no config file provided");
-    let config = Config::new(config_file).expect("error with config xml");
+static HELP: &str = r#"
+Should be something like this:
+<Config>
+    <backup count="10" backup_path="C:\Users\JSmith\Documents\Backup" file="Z:\file1"/>
+    <backup count="10" backup_path="C:\Users\JSmith\Documents\Backup" file="Z:\file2"/>
+</Config>
+"#;
+
+fn main() -> Result<(), &'static str> {
+
+    // let err = format!("no config file provided.{}", HELP.clone());
+    let config_file = std::env::args().nth(1).expect(format!("no config file provided.{}", HELP.clone()).as_str());
+
+    let config = Config::new(config_file).expect(format!("config xml file not correct.{}", HELP).as_str());
     // println!("{:?}", config);
     let backup_results: Vec<Result<String, Box<dyn Error>>> = config.backups.iter().map(|b| backup(b.count, b.backup_path.as_path(), b.file.as_path())).collect();
 
@@ -78,4 +89,5 @@ fn main() {
             Err(e) => println!("file backup failed:\t{}", e.as_ref()),
         }
     }
+    Ok(())
 }
